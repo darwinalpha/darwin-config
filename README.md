@@ -2,15 +2,19 @@
 
 [English](README.md) · [简体中文](README.cn.md)
 
-A layered, recursive JSON / YAML configuration loader: declare where values come from, how they merge, how they are validated and referenced — all in one file. The library takes care of the rest.
+A layered, recursive JSON / YAML / TOML configuration loader: declare where values come from, how they merge, how they are validated and referenced — all in one file. The library takes care of the rest.
 
-- **Zero third-party dependencies in the core**; YAML is an optional extra
+- **Zero third-party dependencies in the core**; JSON and TOML reading use the standard library, YAML is an optional extra
 - One DSL covers everything: layered imports, template merges, environment variables, in-file / cross-file references, arithmetic expressions, and schema validation
 - **A small, well-defined API**: load, read, override, alias, validate and trace — no redundant state-management helpers
+- **Optional L1 framework adapters** for Flask, Django and Pydantic — see section 6
 
 ```bash
-pip install darwin-config              # JSON works out of the box
+pip install darwin-config              # JSON + TOML reading work out of the box
 pip install 'darwin-config[yaml]'      # add YAML support
+pip install 'darwin-config[toml]'      # add TOML *writing* (reading is built in)
+pip install 'darwin-config[all]'       # all formats
+pip install 'darwin-config[pydantic]'  # typed validation adapter (see section 6)
 ```
 
 Python >= 3.12.
@@ -81,7 +85,39 @@ get_config("config.app.budget")     # 6
 }
 ```
 
-> `examples/` contains 8 pairs of equivalent JSON/YAML samples and a runnable demo. Run `PYTHONPATH=src py -3.12 examples/demo.py` to see every capability in action.
+**Equivalent TOML** (root-level keys come before any `[table]`; `~` escapes must be quoted):
+
+```toml
+import = ["base.toml"]
+
+[schema.database.host]
+type = "string"
+required = true
+
+[schema.database.port]
+type = "integer"
+default = 5432
+
+[defaults.pool]
+min = 1
+max = 10
+timeout = 30
+
+[database]
+host = "${DB_HOST:localhost}"
+dsn = "postgresql://${this.database.host}:${this.database.port}/app"
+
+[database.pool]
+merge = "${this.defaults.pool}"
+max = 50
+
+[app]
+retry = 3
+interval = 2
+budget = "%{calc: ${this.app.retry} * ${this.app.interval} }"
+```
+
+> `examples/` contains 8 sets of equivalent JSON/YAML/TOML samples and a runnable demo. Run `uv run --all-extras python examples/demo.py` to see every capability in action.
 
 ---
 
@@ -100,10 +136,16 @@ get_config("config.app.budget")     # 6
 | `~import` / `~schema`, etc. | The `~` prefix escapes a reserved word into an ordinary business field (unescaped at the end of the pipeline) | Load time |
 | `{param}` | Business template placeholder, kept as-is and never touched by env substitution | — |
 
-**Two YAML gotchas** (JSON does not have these):
+**Two YAML gotchas** (JSON and TOML do not have these):
 
 1. `%{calc: ...}` must be quoted: `total: "%{calc: ${this.a} * 2}"`, otherwise `: ` is treated as a mapping separator by YAML.
 2. `${...}` inside a flow sequence must be quoted: `merge: ["${this.tpl}"]`. Written bare as `[${this.tpl}]`, YAML treats `{` as the start of a mapping and parsing fails. Bare use in a plain scalar is safe: `url: ${this.host}/v1`.
+
+**Three TOML notes**:
+
+1. Root-level keys must appear **before** any `[table]` header — in TOML, keys written after `[schema]` belong to that table, not the root.
+2. `~`-escaped keys must be **quoted**: `"~import" = [...]` (TOML bare keys disallow `~`).
+3. Native TOML dates/timestamps are supported as `datetime`/`date` in schema rules (`type = "datetime"`). TOML has no `null`; omit a key instead.
 
 ---
 
@@ -227,7 +269,7 @@ Aliases share the same duplicate-name check as `add_config`; a circular referenc
 
 ### 4.2 Schema validation and defaults
 
-Supports `type` (string/integer/float/boolean/array/object), `required`, `default`, `choices`, `min/max`, `pattern`, custom validators, and `message`. Rules can be inline or in an external JSON/YAML file (which may itself `import` other rule files). Validation failures raise `ConfigValidationError`, whose `errors` is a field-keyed dict.
+Supports `type` (string/integer/float/boolean/array/object, plus `datetime`/`date` for TOML values), `required`, `default`, `choices`, `min/max`, `pattern`, custom validators, and `message`. Rules can be inline or in an external JSON/YAML/TOML file (which may itself `import` other rule files). Validation failures raise `ConfigValidationError`, whose `errors` is a field-keyed dict.
 
 ```python
 from darwin_config import Schema, create_schema, validate_and_fill
@@ -329,15 +371,62 @@ A `merge` source may be a string or an array (multiple sources merged in order) 
 
 ---
 
-## 6. Tests
+## 6. Framework integration (L1 adapters)
+
+L1 adapters copy a config subtree into the framework at startup. They live in `darwin_config.integrations.*` — the core API stays unchanged and framework-free. Flask/Django adapters are duck-typed (no framework import required); only the Pydantic adapter needs `pip install 'darwin-config[pydantic]'`. Optional `[flask]` / `[django]` extras exist for IDE type resolution.
+
+**Flask** — inject into `app.config`:
+
+```python
+from flask import Flask
+from darwin_config import init_config
+from darwin_config.integrations.flask import apply_flask_config
+
+init_config(["settings.yaml"])   # must happen before the app reads its config
+app = Flask(__name__)
+apply_flask_config(app)          # copies the "flask" subtree
+# apply_flask_config(app, "service", prefix="flask_", uppercase=True)
+```
+
+**Django** — in `settings.py`, uppercase names only:
+
+```python
+from darwin_config import init_config, get_config
+from darwin_config.integrations.django import django_settings
+
+init_config(["settings.yaml"])
+globals().update(django_settings())   # reads "django"; drops lowercase keys
+# django_settings(uppercase=True)     # or uppercase every key instead
+LOGGING = get_config("logging")       # straight into logging.config.dictConfig
+```
+
+**Pydantic / FastAPI** — typed validation:
+
+```python
+from pydantic import BaseModel
+from darwin_config.integrations.pydantic import validate_with_pydantic
+
+class Settings(BaseModel):
+    name: str
+    port: int
+
+settings = validate_with_pydantic(Settings, "app")   # or source={"name": "..."}
+```
+
+Adapters inject a **snapshot**: later `set_config()` / `add_config()` calls do not update Flask or Django settings automatically. Re-run the adapter after `reload_config()` if you need to sync.
+
+---
+
+## 7. Tests
 
 ```bash
-pip install -e '.[yaml,test]'
+pip install -e '.[all,pydantic,test]'
+# or with uv: uv run --all-extras python -m pytest tests -q
 pytest tests -q
 ```
 
-Tests are split into `tests/unit/` (individual modules: utilities, node tree, Schema, processor, etc.) and `tests/integration/` (multi-file layering, mixed formats, end-to-end API flows), plus feature-oriented regression tests.
+Tests are split into `tests/unit/` (individual modules: utilities, node tree, Schema, processor, etc.) and `tests/integration/` (multi-file layering, mixed formats, end-to-end API flows, framework adapters), plus feature-oriented regression tests.
 
-## 7. License
+## 8. License
 
 MIT

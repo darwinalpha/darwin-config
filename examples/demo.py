@@ -88,8 +88,10 @@ def main() -> None:
     run("json", "json")
     if importlib.util.find_spec("yaml") is None:
         print("\n[skip] YAML examples: run pip install 'darwin-config[yaml]' first")
-        return
-    run("yaml", "yaml")
+    else:
+        run("yaml", "yaml")
+    # TOML reading uses the standard library tomllib; no optional dependency needed.
+    run("toml", "toml")
 
 
 if __name__ == "__main__":

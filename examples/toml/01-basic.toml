@@ -1,0 +1,13 @@
+# Basics: nested tables + environment variables (with defaults)
+[app]
+name = "demo-service"
+debug = "${DEBUG:false}"
+workers = 4
+
+[database]
+host = "${DB_HOST:localhost}"
+port = "${DB_PORT:5432}"
+
+[database.pool]
+min = 1
+max = 10

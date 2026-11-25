@@ -203,17 +203,19 @@ def is_business_template(value: str) -> bool:
 
 
 # ============================================================
-# Config file loading (built-in JSON / optional YAML)
+# Config file loading (built-in JSON / TOML, optional YAML)
 # ============================================================
 
-SUPPORTED_SUFFIXES = {".json", ".yaml", ".yml"}
+SUPPORTED_SUFFIXES = {".json", ".yaml", ".yml", ".toml"}
 
 
 def load_config_file(filepath: Path) -> Dict[str, Any]:
-    """Load a JSON / YAML config file based on its extension."""
+    """Load a JSON / TOML / YAML config file based on its extension."""
     suffix = filepath.suffix.lower()
     if suffix == ".json":
         return _load_json(filepath)
+    if suffix == ".toml":
+        return _load_toml(filepath)
     if suffix in (".yaml", ".yml"):
         return _load_yaml(filepath)
     raise ConfigError(f"Unsupported config file type: {suffix} ({filepath})")
@@ -222,6 +224,17 @@ def load_config_file(filepath: Path) -> Dict[str, Any]:
 def _load_json(filepath: Path) -> Dict[str, Any]:
     with open(filepath, "r", encoding="utf-8") as handle:
         return json.load(handle)
+
+
+def _load_toml(filepath: Path) -> Dict[str, Any]:
+    """Load TOML with the standard-library tomllib (Python >= 3.11, zero dependency)."""
+    import tomllib
+
+    with open(filepath, "rb") as handle:
+        data = tomllib.load(handle)
+    if not isinstance(data, dict):
+        raise ConfigError(f"Config root must be a table: {filepath}")
+    return data
 
 
 def _load_yaml(filepath: Path) -> Dict[str, Any]:
@@ -246,6 +259,16 @@ def save_config_file(filepath: Path, data: Dict[str, Any], indent: int = 2) -> N
     if suffix == ".json":
         with open(filepath, "w", encoding="utf-8") as handle:
             json.dump(data, handle, indent=indent, ensure_ascii=False)
+        return
+    if suffix == ".toml":
+        try:
+            import tomli_w  # type: ignore[import-not-found]
+        except ImportError as exc:  # pragma: no cover - depends on whether the extra is installed
+            raise ConfigError(
+                "TOML writing requires tomli-w. Install with: pip install darwin-config[toml]"
+            ) from exc
+        with open(filepath, "wb") as handle:
+            tomli_w.dump(data, handle)
         return
     if suffix in (".yaml", ".yml"):
         try:

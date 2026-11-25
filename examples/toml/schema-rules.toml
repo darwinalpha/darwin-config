@@ -1,0 +1,2 @@
+import = "schema-base-rules.toml"
+host = { type = "string", required = true, pattern = "^[a-z.]+$" }

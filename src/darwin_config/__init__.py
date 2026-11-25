@@ -1,11 +1,13 @@
 """
 darwin-config
 
-A layered, recursive JSON / YAML configuration loader.
+A layered, recursive JSON / YAML / TOML configuration loader.
 
-Zero third-party dependencies in the core; YAML support is provided by the
-optional PyYAML extra:
-    pip install darwin-config[yaml]
+Zero third-party dependencies in the core. JSON and TOML reading use the
+standard library; optional extras add capabilities on demand:
+    pip install darwin-config[yaml]      # YAML support
+    pip install darwin-config[toml]      # TOML writing
+    pip install darwin-config[pydantic]  # typed validation adapter
 
 Configuration syntax:
     import / merge / mount / schema  bare-keyword directives (~ escapes them into plain fields)
@@ -43,7 +45,7 @@ from darwin_config.schema import (
     validate_config,
 )
 
-__version__ = "0.2.0"
+__version__ = "0.3.0"
 
 __all__ = [
     # Loading and access

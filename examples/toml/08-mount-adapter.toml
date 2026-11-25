@@ -1,0 +1,4 @@
+# mount: declare this file's mount point (used by add_config)
+mount = "adapter.demo"
+auth = { token = "${ADAPTER_TOKEN:local-token}" }
+endpoint = "https://api.example.com"

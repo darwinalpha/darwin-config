@@ -1,0 +1,14 @@
+# Root-level keys must come before any [table] declaration in TOML.
+token = "${EXPRESSIONS_TOKEN:dev-token}"
+
+# this: in-file reference (resolved at load time, references can chain)
+[storage]
+root = "/data"
+daily = "${this.storage.root}/daily"
+archive = "${this.storage.daily}/archive"
+
+# calc: restricted arithmetic (must be quoted in TOML to keep the value a string)
+[limits]
+timeout = 3
+retry = 4
+total = "%{calc: ${this.limits.timeout} * ${this.limits.retry} }"

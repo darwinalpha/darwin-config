@@ -44,3 +44,10 @@ def write_yaml(path: Path, data: Dict[str, Any]) -> Path:
     yaml = pytest.importorskip("yaml", reason="PyYAML not installed")
     path.write_text(yaml.safe_dump(data, allow_unicode=True, sort_keys=False), encoding="utf-8")
     return path
+
+
+def write_toml(path: Path, data: Dict[str, Any]) -> Path:
+    tomli_w = pytest.importorskip("tomli_w", reason="tomli-w not installed")
+    with open(path, "wb") as handle:
+        tomli_w.dump(data, handle)
+    return path

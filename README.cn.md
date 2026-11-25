@@ -2,15 +2,19 @@
 
 [English](README.md) · 简体中文
 
-分层、可递归的 JSON / YAML 配置加载器：一个文件里写清「从哪来、怎么合、怎么校验、怎么引用」，剩下交给库。
+分层、可递归的 JSON / YAML / TOML 配置加载器：一个文件里写清「从哪来、怎么合、怎么校验、怎么引用」，剩下交给库。
 
-- **核心零第三方依赖**；YAML 为可选增强
+- **核心零第三方依赖**；JSON 与 TOML 读取用标准库，YAML 为可选增强
 - 一套 DSL 同时搞定：分层导入、模板合并、环境变量、文件内/跨文件引用、算术表达式、Schema 校验
 - **小而明确的 API**：加载、读取、覆盖、别名、校验与追溯，没有多余的状态管理函数
+- **可选的 L1 框架适配器**：Flask、Django、Pydantic，见第 6 节
 
 ```bash
-pip install darwin-config              # JSON 开箱即用
+pip install darwin-config              # JSON + TOML 读取开箱即用
 pip install 'darwin-config[yaml]'      # 追加 YAML 支持
+pip install 'darwin-config[toml]'      # 追加 TOML *写入*（读取已内置）
+pip install 'darwin-config[all]'       # 全部格式
+pip install 'darwin-config[pydantic]'  # 类型校验适配器（见第 6 节）
 ```
 
 Python ≥ 3.12。
@@ -81,7 +85,39 @@ get_config("config.app.budget")     # 6
 }
 ```
 
-> `examples/` 下有 8 组 JSON/YAML 对照样本和一个可运行演示脚本，先跑 `PYTHONPATH=src py -3.12 examples/demo.py` 就能看到全部能力。
+**等价的 TOML 版**（根级键必须写在任何 `[table]` 之前；`~` 转义键要加引号）：
+
+```toml
+import = ["base.toml"]
+
+[schema.database.host]
+type = "string"
+required = true
+
+[schema.database.port]
+type = "integer"
+default = 5432
+
+[defaults.pool]
+min = 1
+max = 10
+timeout = 30
+
+[database]
+host = "${DB_HOST:localhost}"
+dsn = "postgresql://${this.database.host}:${this.database.port}/app"
+
+[database.pool]
+merge = "${this.defaults.pool}"
+max = 50
+
+[app]
+retry = 3
+interval = 2
+budget = "%{calc: ${this.app.retry} * ${this.app.interval} }"
+```
+
+> `examples/` 下有 8 组 JSON/YAML/TOML 等价样本和一个可运行演示脚本，跑 `uv run --all-extras python examples/demo.py` 就能看到全部能力。
 
 ---
 
@@ -100,10 +136,16 @@ get_config("config.app.budget")     # 6
 | `~import` / `~schema` 等 | `~` 前缀把保留字转义为普通业务字段（流水线末尾统一脱壳） | 加载期 |
 | `{param}` | 业务模板占位符，原样保留，不会被环境变量替换 | — |
 
-**YAML 两个坑**（JSON 无此问题）：
+**YAML 两个坑**（JSON 与 TOML 无此问题）：
 
 1. `%{calc: ...}` 必须加引号：`total: "%{calc: ${this.a} * 2}"`，否则 `: ` 被 YAML 当成映射分隔符。
 2. flow sequence 里的 `${...}` 必须加引号：`merge: ["${this.tpl}"]`，裸写 `[${this.tpl}]` 中 `{` 会被当成映射起始符而解析失败。块标量里裸写安全：`url: ${this.host}/v1`。
+
+**TOML 三个注意点**：
+
+1. 根级键必须写在任何 `[table]` **之前**——写在 `[schema]` 之后的键属于该表，而非根层。
+2. `~` 转义键必须**加引号**：`"~import" = [...]`（TOML 裸键不允许 `~`）。
+3. TOML 原生日期/时间可用 `type = "datetime"` / `"date"` 做 schema 校验；TOML 没有 `null`，用省略字段表示「无值」。
 
 ---
 
@@ -227,7 +269,7 @@ set_config("primary.auth.token", "x") # 写入后原路径也变成 x
 
 ### 4.2 Schema 校验与默认值
 
-支持 `type`（string/integer/float/boolean/array/object）、`required`、`default`、`choices`、`min/max`、`pattern`、`custom validator`、`message`。规则可以内联，也可以放在外部 JSON/YAML 文件里（外部文件自身还能 `import` 其它规则文件）。校验失败抛 `ConfigValidationError`，errors 是按字段聚合的字典。
+支持 `type`（string/integer/float/boolean/array/object，TOML 值另支持 `datetime`/`date`）、`required`、`default`、`choices`、`min/max`、`pattern`、`custom validator`、`message`。规则可以内联，也可以放在外部 JSON/YAML/TOML 文件里（外部文件自身还能 `import` 其它规则文件）。校验失败抛 `ConfigValidationError`，errors 是按字段聚合的字典。
 
 ```python
 from darwin_config import Schema, create_schema, validate_and_fill
@@ -329,15 +371,62 @@ job:
 
 ---
 
-## 6. 测试
+## 6. 生态集成（L1 适配器）
+
+L1 适配器在启动时把配置子树**拷贝**进框架。代码位于 `darwin_config.integrations.*`，核心 API 不变、不依赖框架。Flask/Django 适配器是鸭子类型（无需 import 框架）；只有 Pydantic 适配器需要 `pip install 'darwin-config[pydantic]'`。另提供可选的 `[flask]` / `[django]` extras，仅用于 IDE 类型提示。
+
+**Flask** —— 注入 `app.config`：
+
+```python
+from flask import Flask
+from darwin_config import init_config
+from darwin_config.integrations.flask import apply_flask_config
+
+init_config(["settings.yaml"])   # 必须早于应用读取配置
+app = Flask(__name__)
+apply_flask_config(app)          # 拷贝 "flask" 子树
+# apply_flask_config(app, "service", prefix="flask_", uppercase=True)
+```
+
+**Django** —— 在 `settings.py` 中，只接受大写变量：
+
+```python
+from darwin_config import init_config, get_config
+from darwin_config.integrations.django import django_settings
+
+init_config(["settings.yaml"])
+globals().update(django_settings())   # 读取 "django" 子树，丢弃小写键
+# django_settings(uppercase=True)     # 或把所有键转成大写
+LOGGING = get_config("logging")       # 可直接交给 logging.config.dictConfig
+```
+
+**Pydantic / FastAPI** —— 类型化校验：
+
+```python
+from pydantic import BaseModel
+from darwin_config.integrations.pydantic import validate_with_pydantic
+
+class Settings(BaseModel):
+    name: str
+    port: int
+
+settings = validate_with_pydantic(Settings, "app")   # 也可传 source={"name": "..."}
+```
+
+适配器注入的是**快照**：之后调用 `set_config()` / `add_config()` 不会自动同步到 Flask/Django 配置；如需同步，在 `reload_config()` 后重新执行适配器。
+
+---
+
+## 7. 测试
 
 ```bash
-pip install -e '.[yaml,test]'
+pip install -e '.[all,pydantic,test]'
+# 或用 uv：uv run --all-extras python -m pytest tests -q
 pytest tests -q
 ```
 
-测试分为 `tests/unit/`（工具函数、节点树、Schema、处理器等单模块）与 `tests/integration/`（多文件分层、混合格式、端到端 API 流程），另有按特性组织的回归测试。
+测试分为 `tests/unit/`（工具函数、节点树、Schema、处理器等单模块）与 `tests/integration/`（多文件分层、混合格式、端到端 API 流程、框架适配器），另有按特性组织的回归测试。
 
-## 7. 许可
+## 8. 许可
 
 MIT

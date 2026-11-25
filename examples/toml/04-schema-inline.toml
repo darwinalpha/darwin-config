@@ -1,0 +1,9 @@
+# Root-level keys must come before any [table] declaration in TOML.
+name = "schema-app"
+port = 9000
+
+# Inline schema: type / required / default / range / choices
+[schema]
+name = { type = "string", required = true }
+port = { type = "integer", default = 8080, min = 1, max = 65535 }
+mode = { type = "string", choices = ["dev", "prod"], default = "dev" }

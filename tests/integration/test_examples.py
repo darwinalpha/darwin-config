@@ -27,6 +27,7 @@ def _clean_env(monkeypatch: pytest.MonkeyPatch) -> None:
                 importlib.util.find_spec("yaml") is None, reason="PyYAML not installed"
             ),
         ),
+        ("toml", "toml"),
     ],
 )
 def test_all_examples(fmt: str, suffix: str) -> None:

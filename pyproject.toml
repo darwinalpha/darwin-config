@@ -1,7 +1,7 @@
 [project]
 name = "darwin-config"
-version = "0.2.0"
-description = "Layered, recursive configuration loader for JSON and YAML with variables, refs and schema validation"
+version = "0.3.0"
+description = "Layered, recursive configuration loader for JSON, YAML and TOML with variables, refs and schema validation"
 readme = "README.md"
 authors = [
     { name = "Hong", email = "sardineclub@126.com" }
@@ -10,7 +10,14 @@ requires-python = ">=3.12"
 dependencies = []
 
 [project.optional-dependencies]
+# Formats: reading JSON/TOML is built in; these extras add YAML and TOML writing.
 yaml = ["PyYAML>=6.0"]
+toml = ["tomli-w>=1.0"]
+all = ["PyYAML>=6.0", "tomli-w>=1.0"]
+# L1 framework adapters (kept separate so the core stays dependency-free).
+flask = ["Flask>=3.0"]
+django = ["Django>=5.0"]
+pydantic = ["pydantic>=2.0"]
 test = ["pytest>=7.0"]
 
 [build-system]

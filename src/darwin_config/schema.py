@@ -1,11 +1,12 @@
 """
 Configuration validation: FieldRule / Schema.
 
-Supports inline rules, external schema files (JSON/YAML), and imports inside schema files.
+Supports inline rules, external schema files (JSON/YAML/TOML), and imports inside schema files.
 """
 
 import re
 from dataclasses import dataclass
+from datetime import date, datetime
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Type, Union
 
@@ -19,6 +20,9 @@ TYPE_MAP: Dict[str, Type] = {
     "boolean": bool,
     "array": list,
     "object": dict,
+    # TOML has native date/time values; datetime is the common base for TOML timestamps.
+    "datetime": datetime,
+    "date": date,
 }
 
 

@@ -154,7 +154,7 @@ def test_yaml_load_save_roundtrip(tmp_path: Path) -> None:
 
 
 def test_unsupported_suffix_raises(tmp_path: Path) -> None:
-    path = tmp_path / "cfg.toml"
+    path = tmp_path / "cfg.ini"
     path.write_text("x = 1", encoding="utf-8")
     with pytest.raises(ConfigError, match="Unsupported config file type"):
         load_config_file(path)

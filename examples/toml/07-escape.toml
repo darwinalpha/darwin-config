@@ -1,0 +1,6 @@
+# The ~ prefix escapes a reserved directive into an ordinary business field.
+# TOML bare keys cannot contain '~', so escaped keys must be quoted.
+import = "01-basic.toml"
+"~import" = ["kept", "as", "data"]
+"~schema" = { name = "mysql" }
+note = "with ~ prefix, directive names become ordinary business keys"
