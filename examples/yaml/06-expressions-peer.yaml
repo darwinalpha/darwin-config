@@ -1,0 +1,2 @@
+# root: cross-file reference into the global config tree (resolved at runtime)
+token_copy: ${root.config.token}

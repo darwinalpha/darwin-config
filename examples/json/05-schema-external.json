@@ -1,0 +1,5 @@
+{
+  "schema": "schema-rules.json",
+  "name": "external-schema-app",
+  "host": "localhost"
+}

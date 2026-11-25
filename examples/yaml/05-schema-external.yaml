@@ -1,0 +1,4 @@
+# External schema file: resolved relative to this file; schema files may use import too
+schema: schema-rules.yaml
+name: external-schema-app
+host: localhost

@@ -1,0 +1,3 @@
+# Base layer: default values
+server: { host: 0.0.0.0, port: 8080, timeout: 30 }
+features: { cache: true, metrics: true }

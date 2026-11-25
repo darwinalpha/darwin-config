@@ -1,0 +1,5 @@
+{
+  "import": "base.json",
+  "server": { "port": 9090, "workers": 8 },
+  "features": { "cache": false }
+}

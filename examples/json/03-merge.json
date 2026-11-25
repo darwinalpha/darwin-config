@@ -1,0 +1,20 @@
+{
+  "templates": {
+    "http": {
+      "timeout": 30,
+      "retry": 3,
+      "headers": { "Accept": "application/json" }
+    },
+    "auth": { "type": "bearer", "required": true }
+  },
+  "clients": {
+    "public": {
+      "merge": "${this.templates.http}",
+      "timeout": 10
+    },
+    "private": {
+      "merge": ["${this.templates.http}", "${this.templates.auth}"],
+      "retry": 5
+    }
+  }
+}

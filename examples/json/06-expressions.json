@@ -1,0 +1,13 @@
+{
+  "storage": {
+    "root": "/data",
+    "daily": "${this.storage.root}/daily",
+    "archive": "${this.storage.daily}/archive"
+  },
+  "limits": {
+    "timeout": 3,
+    "retry": 4,
+    "total": "%{calc: ${this.limits.timeout} * ${this.limits.retry} }"
+  },
+  "token": "${EXPRESSIONS_TOKEN:dev-token}"
+}

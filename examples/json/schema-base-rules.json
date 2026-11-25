@@ -1,0 +1,4 @@
+{
+  "name": { "type": "string", "required": true },
+  "port": { "type": "integer", "default": 80 }
+}

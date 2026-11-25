@@ -1,0 +1,3 @@
+{
+  "token_copy": "${root.config.token}"
+}

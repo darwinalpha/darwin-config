@@ -1,0 +1,4 @@
+{
+  "import": "schema-base-rules.json",
+  "host": { "type": "string", "required": true, "pattern": "^[a-z.]+$" }
+}

@@ -1,0 +1,6 @@
+{
+  "import": "01-basic.json",
+  "~import": ["kept", "as", "data"],
+  "~schema": { "name": "mysql" },
+  "note": "with ~ prefix, directive names become ordinary business keys"
+}

@@ -1,0 +1,5 @@
+# The ~ prefix escapes a reserved directive into an ordinary business field
+import: 01-basic.yaml
+~import: [kept, as, data]
+~schema: { name: mysql }
+note: with ~ prefix, directive names become ordinary business keys
