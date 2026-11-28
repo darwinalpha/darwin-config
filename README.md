@@ -1,6 +1,6 @@
 # darwin-config
 
-[English](README.md) · [简体中文](README.cn.md)
+[English](https://github.com/darwinalpha/darwin-config/blob/main/README.md) · [简体中文](https://github.com/darwinalpha/darwin-config/blob/main/README.cn.md)
 
 A layered, recursive JSON / YAML / TOML configuration loader: declare where values come from, how they merge, how they are validated and referenced — all in one file. The library takes care of the rest.
 

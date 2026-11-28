@@ -1,6 +1,6 @@
 [project]
 name = "darwin-config"
-version = "0.3.1"
+version = "0.3.2"
 description = "Layered, recursive configuration loader for JSON, YAML and TOML with variables, refs and schema validation"
 readme = "README.md"
 authors = [
@@ -8,6 +8,9 @@ authors = [
 ]
 requires-python = ">=3.12"
 dependencies = []
+
+[project.urls]
+"Chinese Documentation" = "https://github.com/darwinalpha/darwin-config/blob/main/README.cn.md"
 
 [project.optional-dependencies]
 # Formats: reading JSON/TOML is built in; these extras add YAML and TOML writing.

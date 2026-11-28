@@ -1,6 +1,6 @@
 # darwin-config
 
-[English](README.md) · 简体中文
+[English](https://github.com/darwinalpha/darwin-config/blob/main/README.md) · 简体中文
 
 分层、可递归的 JSON / YAML / TOML 配置加载器：一个文件里写清「从哪来、怎么合、怎么校验、怎么引用」，剩下交给库。
 
