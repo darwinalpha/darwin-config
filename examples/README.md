@@ -28,6 +28,7 @@ python examples/demo.py
 2. `${...}` inside a flow sequence **must be quoted**: `merge: ["${this.templates.http}"]`; the bare form `[${this.x}]` is parsed as a mapping start and fails.
 3. Bare use in a plain scalar is safe: `url: ${this.host}/v1`.
 4. Escape keys such as `~import` / `~schema` need no quotes in YAML.
+5. Avoid native YAML anchors and merge keys (`&a` / `*a` / `<<`) when using the library's directives: PyYAML expands them before the library runs, `<<: [*a, *b]` is first-wins (the library's `merge` is last-wins), anchors cannot cross `import` files, and `safe_dump` expands them on save. Use `merge` / `import` instead — see section 5.4 of the main README.
 
 ## TOML writing notes
 

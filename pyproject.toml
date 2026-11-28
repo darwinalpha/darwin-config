@@ -1,6 +1,6 @@
 [project]
 name = "darwin-config"
-version = "0.3.0"
+version = "0.3.1"
 description = "Layered, recursive configuration loader for JSON, YAML and TOML with variables, refs and schema validation"
 readme = "README.md"
 authors = [

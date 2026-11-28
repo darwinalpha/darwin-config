@@ -369,6 +369,18 @@ A `merge` source may be a string or an array (multiple sources merged in order) 
 
 > `None` is a valid value and overrides the old one rather than being ignored; `reload_config()` rebuilds from files and replays all `add_config` calls, which clears `set_config` runtime overrides.
 
+### 5.4 YAML anchors and merge keys (`&` / `*` / `<<`)
+
+YAML's native anchors and aliases are expanded by PyYAML **during parsing**, before darwin-config sees the data. They parse successfully but are **not recommended** when a configuration also uses this library's directives:
+
+- **Opposite precedence with multiple sources.** YAML `<<: [*a, *b]` is *first occurrence wins*; the library's `merge: ["${this.a}", "${this.b}"]` is *last occurrence wins*. With `a.x = 1, b.x = 2`, the former gives `x = 1`, the latter `x = 2`. An explicit key beats both forms.
+- **No cross-file scope.** Anchors are file-local: an `import`ed file cannot reference an anchor defined in the importing file (PyYAML raises `ComposerError: found undefined alias`).
+- **Outside library semantics.** `<<` is resolved by PyYAML, so it bypasses the library's merge precedence, source tracing and directive remapping. Anchors can still feed the library's own directives through `<<`.
+- **Not preserved on save.** `save_config_file()` uses `yaml.safe_dump()`; anchors are expanded into plain copies.
+- A self-referential anchor (`a: &a {self: *a}`) triggers the library's circular-reference guard. `<<` is a YAML 1.1 merge key — supported by PyYAML, but not part of the YAML 1.2 core schema.
+
+Use the library's `merge` / `import` consistently for config reuse; that keeps behavior identical across JSON, YAML and TOML.
+
 ---
 
 ## 6. Framework integration (L1 adapters)

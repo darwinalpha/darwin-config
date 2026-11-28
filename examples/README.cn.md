@@ -28,6 +28,7 @@ python examples/demo.py
 2. flow sequence 中的 `${...}` **必须加引号**：`merge: ["${this.templates.http}"]`，裸写 `[${this.x}]` 会被当成映射起始符而解析失败。
 3. 块标量中的裸写是安全的：`url: ${this.host}/v1`。
 4. `~import` / `~schema` 这类转义键在 YAML 中无需引号。
+5. 使用本库指令时请避免 YAML 原生锚点与合并键（`&a` / `*a` / `<<`）：PyYAML 会在库运行前展开它们；`<<: [*a, *b]` 是先出现优先（本库 `merge` 是后出现覆盖前）；锚点不能跨 `import` 文件；保存时 `safe_dump` 会展开锚点。请统一使用 `merge` / `import`，详见主 README 第 5.4 节。
 
 ## TOML 书写注意
 

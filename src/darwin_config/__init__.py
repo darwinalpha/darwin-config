@@ -45,7 +45,7 @@ from darwin_config.schema import (
     validate_config,
 )
 
-__version__ = "0.3.0"
+__version__ = "0.3.1"
 
 __all__ = [
     # Loading and access
